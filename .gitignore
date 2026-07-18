@@ -5,6 +5,7 @@ dist
 tmp
 out-tsc
 .env
+.angular
 
 # dependencies
 node_modules
