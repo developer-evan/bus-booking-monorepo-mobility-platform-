@@ -1,6 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
+import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
+import { assertCompanyResourceAccess } from '../../common/utils/access.util';
+import { getTenantCompanyId } from '../../common/utils/tenant.util';
 import { CreateRouteDto } from './dto/create-route.dto';
 import { QueryRouteDto } from './dto/query-route.dto';
 import { UpdateRouteDto } from './dto/update-route.dto';
@@ -12,12 +19,22 @@ export class RoutesService {
     @InjectModel(Route.name) private readonly routeModel: Model<RouteDocument>,
   ) {}
 
-  async create(createRouteDto: CreateRouteDto): Promise<RouteDocument> {
-    return this.routeModel.create(createRouteDto);
+  async create(
+    createRouteDto: CreateRouteDto,
+    companyId: string,
+  ): Promise<RouteDocument> {
+    return this.routeModel.create({
+      ...createRouteDto,
+      company: new Types.ObjectId(companyId),
+    });
   }
 
   async findAll(query: QueryRouteDto): Promise<RouteDocument[]> {
     const filter: Record<string, unknown> = {};
+
+    if (query.company) {
+      filter.company = new Types.ObjectId(query.company);
+    }
 
     if (query.origin) {
       filter.origin = new RegExp(query.origin, 'i');
@@ -31,11 +48,18 @@ export class RoutesService {
       filter.isActive = query.isActive;
     }
 
-    return this.routeModel.find(filter).sort({ origin: 1, destination: 1 }).exec();
+    return this.routeModel
+      .find(filter)
+      .populate('company', 'name slug')
+      .sort({ origin: 1, destination: 1 })
+      .exec();
   }
 
   async findById(id: string): Promise<RouteDocument> {
-    const route = await this.routeModel.findById(id).exec();
+    const route = await this.routeModel
+      .findById(id)
+      .populate('company', 'name slug')
+      .exec();
     if (!route) {
       throw new NotFoundException(`Route with id "${id}" not found`);
     }
@@ -45,22 +69,34 @@ export class RoutesService {
   async update(
     id: string,
     updateRouteDto: UpdateRouteDto,
+    currentUser: AuthenticatedUser,
   ): Promise<RouteDocument> {
-    const route = await this.routeModel
+    const route = await this.findById(id);
+    assertCompanyResourceAccess(currentUser, route.company);
+
+    const updatedRoute = await this.routeModel
       .findByIdAndUpdate(id, updateRouteDto, { new: true, runValidators: true })
+      .populate('company', 'name slug')
       .exec();
 
-    if (!route) {
+    if (!updatedRoute) {
       throw new NotFoundException(`Route with id "${id}" not found`);
     }
 
-    return route;
+    return updatedRoute;
   }
 
-  async remove(id: string): Promise<void> {
-    const route = await this.routeModel.findByIdAndDelete(id).exec();
-    if (!route) {
-      throw new NotFoundException(`Route with id "${id}" not found`);
+  async remove(id: string, currentUser: AuthenticatedUser): Promise<void> {
+    const route = await this.findById(id);
+    assertCompanyResourceAccess(currentUser, route.company);
+    await this.routeModel.findByIdAndDelete(id).exec();
+  }
+
+  assertWritableCompany(currentUser: AuthenticatedUser): string {
+    const companyId = getTenantCompanyId(currentUser);
+    if (!companyId) {
+      throw new ForbiddenException('Company staff account required');
     }
+    return companyId;
   }
 }

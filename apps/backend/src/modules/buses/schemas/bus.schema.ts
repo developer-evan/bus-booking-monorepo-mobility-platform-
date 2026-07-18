@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export enum BusType {
   STANDARD = 'standard',
@@ -18,7 +18,10 @@ export type BusDocument = Bus & Document;
 
 @Schema({ timestamps: true })
 export class Bus {
-  @Prop({ required: true, unique: true, trim: true, uppercase: true })
+  @Prop({ type: Types.ObjectId, ref: 'Company', required: true })
+  company: Types.ObjectId;
+
+  @Prop({ required: true, trim: true, uppercase: true })
   plateNumber: string;
 
   @Prop({ required: true, trim: true })
@@ -38,3 +41,5 @@ export class Bus {
 }
 
 export const BusSchema = SchemaFactory.createForClass(Bus);
+
+BusSchema.index({ company: 1, plateNumber: 1 }, { unique: true });

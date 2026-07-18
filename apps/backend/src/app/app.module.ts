@@ -8,6 +8,7 @@ import { validationSchema } from '../config/validation.schema';
 import { DatabaseModule } from '../database/database.module';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { CompaniesModule } from '../modules/companies/companies.module';
 import { AuthModule } from '../modules/auth/auth.module';
 import { UsersModule } from '../modules/users/users.module';
 import { BusesModule } from '../modules/buses/buses.module';
@@ -23,6 +24,7 @@ import { BookingsModule } from '../modules/bookings/bookings.module';
       validationSchema,
     }),
     DatabaseModule,
+    CompaniesModule,
     AuthModule,
     UsersModule,
     BusesModule,

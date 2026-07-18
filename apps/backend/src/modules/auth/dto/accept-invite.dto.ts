@@ -7,12 +7,21 @@ import {
 } from 'class-validator';
 import { RequireEmailOrPhone } from '../../../common/validators/require-email-or-phone.validator';
 
-export class RegisterDto {
-  @ApiProperty({ example: 'John Customer' })
+export class AcceptInviteDto {
+  @ApiProperty({ example: 'invite-token-from-email-or-sms' })
+  @IsString()
+  token: string;
+
+  @ApiProperty({ example: 'Jane Admin' })
   @IsString()
   fullName: string;
 
-  @ApiPropertyOptional({ example: 'john@example.com' })
+  @ApiProperty({ example: 'SecurePass123', minLength: 8 })
+  @IsString()
+  @MinLength(8)
+  password: string;
+
+  @ApiPropertyOptional({ example: 'jane@coastal.com' })
   @IsOptional()
   @IsEmail()
   email?: string;
@@ -22,9 +31,4 @@ export class RegisterDto {
   @IsString()
   @RequireEmailOrPhone()
   phone?: string;
-
-  @ApiProperty({ example: 'SecurePass123', minLength: 8 })
-  @IsString()
-  @MinLength(8)
-  password: string;
 }

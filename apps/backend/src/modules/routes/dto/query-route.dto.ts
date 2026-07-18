@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsMongoId, IsOptional, IsString } from 'class-validator';
 
 export class QueryRouteDto {
   @ApiPropertyOptional({ example: 'Nairobi' })
@@ -18,4 +18,9 @@ export class QueryRouteDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ example: '665f1c2d3e4a5b6c7d8e9f01' })
+  @IsOptional()
+  @IsMongoId()
+  company?: string;
 }

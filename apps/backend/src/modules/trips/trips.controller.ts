@@ -15,6 +15,8 @@ import {
 } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { UserRole } from '../users/schemas/user.schema';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { QueryTripDto } from './dto/query-trip.dto';
@@ -43,25 +45,36 @@ export class TripsController {
   @Post()
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN, UserRole.OPERATOR)
-  @ApiOperation({ summary: 'Schedule a trip (admin/operator)' })
-  create(@Body() createTripDto: CreateTripDto) {
-    return this.tripsService.create(createTripDto);
+  @ApiOperation({ summary: 'Schedule a trip (company staff)' })
+  create(
+    @Body() createTripDto: CreateTripDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const companyId = this.tripsService.assertWritableCompany(user);
+    return this.tripsService.create(createTripDto, companyId);
   }
 
   @Patch(':id')
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN, UserRole.OPERATOR)
-  @ApiOperation({ summary: 'Update a trip (admin/operator)' })
-  update(@Param('id') id: string, @Body() updateTripDto: UpdateTripDto) {
-    return this.tripsService.update(id, updateTripDto);
+  @ApiOperation({ summary: 'Update a trip (company staff)' })
+  update(
+    @Param('id') id: string,
+    @Body() updateTripDto: UpdateTripDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.tripsService.update(id, updateTripDto, user);
   }
 
   @Delete(':id')
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete a trip (admin only)' })
-  async remove(@Param('id') id: string) {
-    await this.tripsService.remove(id);
+  @ApiOperation({ summary: 'Delete a trip (company admin)' })
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    await this.tripsService.remove(id, user);
     return { message: 'Trip deleted successfully' };
   }
 }

@@ -4,17 +4,21 @@ NestJS REST API for a bus ticket booking platform. Operators schedule trips on r
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Framework | [NestJS 11](https://nestjs.com/) |
-| Database | [MongoDB](https://www.mongodb.com/) |
-| ODM | [Mongoose 9](https://mongoosejs.com/) via `@nestjs/mongoose` |
-| Auth | JWT + Passport (`passport-jwt`, `bcrypt`) |
-| Validation | `class-validator` + `class-transformer` |
-| API Docs | Swagger (`@nestjs/swagger`) |
-| Monorepo | [Nx](https://nx.dev/) |
+
+| Layer      | Technology                                                   |
+| ---------- | ------------------------------------------------------------ |
+| Framework  | [NestJS 11](https://nestjs.com/)                             |
+| Database   | [MongoDB](https://www.mongodb.com/)                          |
+| ODM        | [Mongoose 9](https://mongoosejs.com/) via `@nestjs/mongoose` |
+| Auth       | JWT + Passport (`passport-jwt`, `bcrypt`)                    |
+| Validation | `class-validator` + `class-transformer`                      |
+| API Docs   | Swagger (`@nestjs/swagger`)                                  |
+| Monorepo   | [Nx](https://nx.dev/)                                        |
+
 
 ---
+
+
 
 ## Architecture
 
@@ -39,6 +43,10 @@ flowchart TB
   Services --> Mongoose
   Mongoose --> MongoDB
 ```
+
+
+
+
 
 ### Module layout
 
@@ -82,7 +90,11 @@ flowchart LR
   DB --> Config
 ```
 
+
+
 ---
+
+
 
 ## Domain Model
 
@@ -144,6 +156,8 @@ erDiagram
   }
 ```
 
+
+
 **Key design decisions**
 
 - **Route vs Trip** — A route is a reusable template (e.g. Nairobi → Mombasa). A trip is one scheduled run on a specific date with a specific bus.
@@ -153,7 +167,11 @@ erDiagram
 
 ---
 
+
+
 ## Design Flows
+
+
 
 ### 1. Authentication flow
 
@@ -182,10 +200,14 @@ sequenceDiagram
   S-->>C: user (no password)
 ```
 
+
+
 Every protected request passes through global guards:
 
-1. **`JwtAuthGuard`** — Validates Bearer token unless route is marked `@Public()`.
-2. **`RolesGuard`** — Checks `@Roles(...)` metadata against the user's role.
+1. `JwtAuthGuard` — Validates Bearer token unless route is marked `@Public()`.
+2. `RolesGuard` — Checks `@Roles(...)` metadata against the user's role.
+
+
 
 ### 2. Operator setup flow
 
@@ -198,10 +220,15 @@ flowchart TD
   C --> D[Trip available<br/>GET /api/trips]
 ```
 
+
+
 When a trip is created:
+
 - Route and bus must exist; bus must be `active`.
 - `availableSeats` defaults to the bus `seatCapacity`.
 - `arrivalTime` must be after `departureTime`.
+
+
 
 ### 3. Customer booking flow
 
@@ -225,37 +252,46 @@ sequenceDiagram
   BS-->>C: booking + reference
 ```
 
+
+
 On cancellation (`PATCH /api/bookings/:id/status` → `cancelled`):
+
 - Seats are released back to the trip via `releaseSeats`.
 - Only active bookings (`pending` / `confirmed`) restore inventory.
 
 ---
 
+
+
 ## Roles & Permissions
 
-| Action | Public | Customer | Operator | Admin |
-|--------|:------:|:--------:|:--------:|:-----:|
-| Register / Login | ✓ | | | |
-| Health check `GET /api` | ✓ | | | |
-| Browse buses, routes, trips | ✓ | ✓ | ✓ | ✓ |
-| Create/update buses, routes, trips | | | ✓ | ✓ |
-| Delete buses, routes, trips | | | | ✓ |
-| Book seats | | ✓ | | |
-| View own bookings | | ✓ | | |
-| View all bookings | | | ✓ | ✓ |
-| Update booking status | | cancel own | ✓ | ✓ |
-| User management | | | | ✓ |
+
+| Action                             | Public | Customer   | Operator | Admin |
+| ---------------------------------- | ------ | ---------- | -------- | ----- |
+| Register / Login                   | ✓      |            |          |       |
+| Health check `GET /api`            | ✓      |            |          |       |
+| Browse buses, routes, trips        | ✓      | ✓          | ✓        | ✓     |
+| Create/update buses, routes, trips |        |            | ✓        | ✓     |
+| Delete buses, routes, trips        |        |            |          | ✓     |
+| Book seats                         |        | ✓          |          |       |
+| View own bookings                  |        | ✓          |          |       |
+| View all bookings                  |        |            | ✓        | ✓     |
+| Update booking status              |        | cancel own | ✓        | ✓     |
+| User management                    |        |            |          | ✓     |
+
 
 **Bootstrap first admin** — Register via `/api/auth/register`, then promote in MongoDB:
 
 ```js
 db.users.updateOne(
   { email: "you@example.com" },
-  { $set: { role: "admin" } }
+  { $set: { role: "a dmin" } }
 )
 ```
 
 ---
+
+
 
 ## API Reference
 
@@ -263,65 +299,99 @@ Base URL: `http://localhost:3000/api`
 Interactive docs: `http://localhost:3000/docs`
 
 ### Auth
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/auth/register` | Public | Create customer account |
-| POST | `/auth/login` | Public | Get JWT |
-| GET | `/auth/me` | JWT | Current profile |
+
+
+| Method | Path             | Auth   | Description             |
+| ------ | ---------------- | ------ | ----------------------- |
+| POST   | `/auth/register` | Public | Create customer account |
+| POST   | `/auth/login`    | Public | Get JWT                 |
+| GET    | `/auth/me`       | JWT    | Current profile         |
+
+
+
 
 ### Users
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/users` | Admin | Create user (any role) |
-| GET | `/users` | Admin | List users |
-| GET | `/users/:id` | Admin / self | Get user |
-| PATCH | `/users/:id` | Admin / self | Update user |
-| DELETE | `/users/:id` | Admin | Delete user |
+
+
+| Method | Path         | Auth         | Description            |
+| ------ | ------------ | ------------ | ---------------------- |
+| POST   | `/users`     | Admin        | Create user (any role) |
+| GET    | `/users`     | Admin        | List users             |
+| GET    | `/users/:id` | Admin / self | Get user               |
+| PATCH  | `/users/:id` | Admin / self | Update user            |
+| DELETE | `/users/:id` | Admin        | Delete user            |
+
+
+
 
 ### Buses
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/buses` | Public | List buses |
-| GET | `/buses/:id` | Public | Get bus |
-| POST | `/buses` | Operator+ | Create bus |
-| PATCH | `/buses/:id` | Operator+ | Update bus |
-| DELETE | `/buses/:id` | Admin | Delete bus |
+
+
+| Method | Path         | Auth      | Description |
+| ------ | ------------ | --------- | ----------- |
+| GET    | `/buses`     | Public    | List buses  |
+| GET    | `/buses/:id` | Public    | Get bus     |
+| POST   | `/buses`     | Operator+ | Create bus  |
+| PATCH  | `/buses/:id` | Operator+ | Update bus  |
+| DELETE | `/buses/:id` | Admin     | Delete bus  |
+
+
+
 
 ### Routes
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/routes` | Public | List routes (filter by origin/destination) |
-| GET | `/routes/:id` | Public | Get route |
-| POST | `/routes` | Operator+ | Create route |
-| PATCH | `/routes/:id` | Operator+ | Update route |
-| DELETE | `/routes/:id` | Admin | Delete route |
+
+
+| Method | Path          | Auth      | Description                                |
+| ------ | ------------- | --------- | ------------------------------------------ |
+| GET    | `/routes`     | Public    | List routes (filter by origin/destination) |
+| GET    | `/routes/:id` | Public    | Get route                                  |
+| POST   | `/routes`     | Operator+ | Create route                               |
+| PATCH  | `/routes/:id` | Operator+ | Update route                               |
+| DELETE | `/routes/:id` | Admin     | Delete route                               |
+
+
+
 
 ### Trips
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/trips` | Public | Search trips |
-| GET | `/trips/:id` | Public | Get trip (populated route + bus) |
-| POST | `/trips` | Operator+ | Schedule trip |
-| PATCH | `/trips/:id` | Operator+ | Update trip |
-| DELETE | `/trips/:id` | Admin | Delete trip |
+
+
+| Method | Path         | Auth      | Description                      |
+| ------ | ------------ | --------- | -------------------------------- |
+| GET    | `/trips`     | Public    | Search trips                     |
+| GET    | `/trips/:id` | Public    | Get trip (populated route + bus) |
+| POST   | `/trips`     | Operator+ | Schedule trip                    |
+| PATCH  | `/trips/:id` | Operator+ | Update trip                      |
+| DELETE | `/trips/:id` | Admin     | Delete trip                      |
+
+
+
 
 ### Bookings
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/bookings` | Customer | Book seats |
-| GET | `/bookings` | JWT | List bookings |
-| GET | `/bookings/:id` | JWT | Get booking |
-| PATCH | `/bookings/:id/status` | JWT | Update status |
-| DELETE | `/bookings/:id` | Admin | Delete booking |
+
+
+| Method | Path                   | Auth     | Description    |
+| ------ | ---------------------- | -------- | -------------- |
+| POST   | `/bookings`            | Customer | Book seats     |
+| GET    | `/bookings`            | JWT      | List bookings  |
+| GET    | `/bookings/:id`        | JWT      | Get booking    |
+| PATCH  | `/bookings/:id/status` | JWT      | Update status  |
+| DELETE | `/bookings/:id`        | Admin    | Delete booking |
+
 
 ---
 
+
+
 ## Getting Started
+
+
 
 ### Prerequisites
 
 - Node.js 20+
 - MongoDB running locally or a MongoDB Atlas URI
+
+
 
 ### Environment
 
@@ -331,13 +401,17 @@ Copy the example env file:
 cp apps/backend/.env.example apps/backend/.env
 ```
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NODE_ENV` | No | `development` / `production` / `test` |
-| `PORT` | No | Server port (default `3000`) |
-| `MONGODB_URI` | Yes | MongoDB connection string |
-| `JWT_SECRET` | Yes | Secret for signing JWTs |
-| `JWT_EXPIRES_IN` | No | Token lifetime (default `1d`) |
+
+| Variable         | Required | Description                           |
+| ---------------- | -------- | ------------------------------------- |
+| `NODE_ENV`       | No       | `development` / `production` / `test` |
+| `PORT`           | No       | Server port (default `3000`)          |
+| `MONGODB_URI`    | Yes      | MongoDB connection string             |
+| `JWT_SECRET`     | Yes      | Secret for signing JWTs               |
+| `JWT_EXPIRES_IN` | No       | Token lifetime (default `1d`)         |
+
+
+
 
 ### Run
 
@@ -359,15 +433,19 @@ npx nx run @org/backend:test
 npx nx run @org/backend:lint
 ```
 
+
+
 ### Quick test via Swagger
 
-1. Open http://localhost:3000/docs
+1. Open [http://localhost:3000/docs](http://localhost:3000/docs)
 2. `POST /api/auth/register` — create a customer
 3. Copy `accessToken` from the response
 4. Click **Authorize** → paste `Bearer <token>`
 5. Try protected endpoints
 
 ---
+
+
 
 ## Project Conventions
 
@@ -378,6 +456,8 @@ npx nx run @org/backend:lint
 - **Errors** — Standard NestJS exceptions (`NotFoundException`, `ConflictException`, etc.).
 
 ---
+
+
 
 ## Roadmap
 

@@ -13,6 +13,9 @@ export type TripDocument = Trip & Document;
 
 @Schema({ timestamps: true })
 export class Trip {
+  @Prop({ type: Types.ObjectId, ref: 'Company', required: true })
+  company: Types.ObjectId;
+
   @Prop({ type: Types.ObjectId, ref: 'Route', required: true })
   route: Types.ObjectId;
 

@@ -1,10 +1,14 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
+import { assertCompanyResourceAccess } from '../../common/utils/access.util';
+import { getTenantCompanyId } from '../../common/utils/tenant.util';
 import { Bus, BusDocument, BusStatus } from '../buses/schemas/bus.schema';
 import { Route, RouteDocument } from '../routes/schemas/route.schema';
 import { CreateTripDto } from './dto/create-trip.dto';
@@ -20,7 +24,10 @@ export class TripsService {
     @InjectModel(Bus.name) private readonly busModel: Model<BusDocument>,
   ) {}
 
-  async create(createTripDto: CreateTripDto): Promise<TripDocument> {
+  async create(
+    createTripDto: CreateTripDto,
+    companyId: string,
+  ): Promise<TripDocument> {
     const route = await this.routeModel.findById(createTripDto.route).exec();
     if (!route) {
       throw new NotFoundException(`Route with id "${createTripDto.route}" not found`);
@@ -29,6 +36,10 @@ export class TripsService {
     const bus = await this.busModel.findById(createTripDto.bus).exec();
     if (!bus) {
       throw new NotFoundException(`Bus with id "${createTripDto.bus}" not found`);
+    }
+
+    if (route.company.toString() !== companyId || bus.company.toString() !== companyId) {
+      throw new ForbiddenException('Route and bus must belong to your company');
     }
 
     if (bus.status !== BusStatus.ACTIVE) {
@@ -52,6 +63,7 @@ export class TripsService {
 
     return this.tripModel.create({
       ...createTripDto,
+      company: new Types.ObjectId(companyId),
       departureTime,
       arrivalTime,
       availableSeats,
@@ -61,6 +73,10 @@ export class TripsService {
 
   async findAll(query: QueryTripDto): Promise<TripDocument[]> {
     const filter: Record<string, unknown> = {};
+
+    if (query.company) {
+      filter.company = new Types.ObjectId(query.company);
+    }
 
     if (query.route) {
       filter.route = new Types.ObjectId(query.route);
@@ -92,6 +108,7 @@ export class TripsService {
       .find(filter)
       .populate('route')
       .populate('bus')
+      .populate('company', 'name slug')
       .sort({ departureTime: 1 })
       .exec();
 
@@ -118,6 +135,7 @@ export class TripsService {
       .findById(id)
       .populate('route')
       .populate('bus')
+      .populate('company', 'name slug')
       .exec();
 
     if (!trip) {
@@ -127,8 +145,14 @@ export class TripsService {
     return trip;
   }
 
-  async update(id: string, updateTripDto: UpdateTripDto): Promise<TripDocument> {
+  async update(
+    id: string,
+    updateTripDto: UpdateTripDto,
+    currentUser: AuthenticatedUser,
+  ): Promise<TripDocument> {
     const existingTrip = await this.findById(id);
+    assertCompanyResourceAccess(currentUser, existingTrip.company);
+
     const updateData: Record<string, unknown> = { ...updateTripDto };
 
     if (updateTripDto.route) {
@@ -138,6 +162,7 @@ export class TripsService {
           `Route with id "${updateTripDto.route}" not found`,
         );
       }
+      assertCompanyResourceAccess(currentUser, route.company);
     }
 
     if (updateTripDto.bus) {
@@ -145,6 +170,7 @@ export class TripsService {
       if (!bus) {
         throw new NotFoundException(`Bus with id "${updateTripDto.bus}" not found`);
       }
+      assertCompanyResourceAccess(currentUser, bus.company);
     }
 
     if (updateTripDto.departureTime) {
@@ -168,6 +194,7 @@ export class TripsService {
       .findByIdAndUpdate(id, updateData, { new: true, runValidators: true })
       .populate('route')
       .populate('bus')
+      .populate('company', 'name slug')
       .exec();
 
     if (!trip) {
@@ -177,11 +204,18 @@ export class TripsService {
     return trip;
   }
 
-  async remove(id: string): Promise<void> {
-    const trip = await this.tripModel.findByIdAndDelete(id).exec();
-    if (!trip) {
-      throw new NotFoundException(`Trip with id "${id}" not found`);
+  async remove(id: string, currentUser: AuthenticatedUser): Promise<void> {
+    const trip = await this.findById(id);
+    assertCompanyResourceAccess(currentUser, trip.company);
+    await this.tripModel.findByIdAndDelete(id).exec();
+  }
+
+  assertWritableCompany(currentUser: AuthenticatedUser): string {
+    const companyId = getTenantCompanyId(currentUser);
+    if (!companyId) {
+      throw new ForbiddenException('Company staff account required');
     }
+    return companyId;
   }
 
   async reserveSeats(tripId: string, seatCount: number): Promise<TripDocument> {

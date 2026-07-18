@@ -37,4 +37,9 @@ export class QueryTripDto {
   @IsOptional()
   @IsDateString()
   departureTo?: string;
+
+  @ApiPropertyOptional({ example: '665f1c2d3e4a5b6c7d8e9f03' })
+  @IsOptional()
+  @IsMongoId()
+  company?: string;
 }

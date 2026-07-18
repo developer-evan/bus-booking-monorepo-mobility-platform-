@@ -15,6 +15,8 @@ import {
 } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { UserRole } from '../users/schemas/user.schema';
 import { BusesService } from './buses.service';
 import { CreateBusDto } from './dto/create-bus.dto';
@@ -43,25 +45,36 @@ export class BusesController {
   @Post()
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN, UserRole.OPERATOR)
-  @ApiOperation({ summary: 'Create a bus (admin/operator)' })
-  create(@Body() createBusDto: CreateBusDto) {
-    return this.busesService.create(createBusDto);
+  @ApiOperation({ summary: 'Create a bus (company staff)' })
+  create(
+    @Body() createBusDto: CreateBusDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const companyId = this.busesService.assertWritableCompany(user);
+    return this.busesService.create(createBusDto, companyId);
   }
 
   @Patch(':id')
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN, UserRole.OPERATOR)
-  @ApiOperation({ summary: 'Update a bus (admin/operator)' })
-  update(@Param('id') id: string, @Body() updateBusDto: UpdateBusDto) {
-    return this.busesService.update(id, updateBusDto);
+  @ApiOperation({ summary: 'Update a bus (company staff)' })
+  update(
+    @Param('id') id: string,
+    @Body() updateBusDto: UpdateBusDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.busesService.update(id, updateBusDto, user);
   }
 
   @Delete(':id')
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete a bus (admin only)' })
-  async remove(@Param('id') id: string) {
-    await this.busesService.remove(id);
+  @ApiOperation({ summary: 'Delete a bus (company admin)' })
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    await this.busesService.remove(id, user);
     return { message: 'Bus deleted successfully' };
   }
 }

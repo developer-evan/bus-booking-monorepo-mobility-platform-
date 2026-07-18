@@ -1,5 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
+import { CompaniesService } from '../companies/companies.service';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 
@@ -12,6 +13,10 @@ describe('AuthService', () => {
         AuthService,
         {
           provide: UsersService,
+          useValue: {},
+        },
+        {
+          provide: CompaniesService,
           useValue: {},
         },
         {

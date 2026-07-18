@@ -1,10 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export type RouteDocument = Route & Document;
 
 @Schema({ timestamps: true })
 export class Route {
+  @Prop({ type: Types.ObjectId, ref: 'Company', required: true })
+  company: Types.ObjectId;
+
   @Prop({ required: true, trim: true })
   origin: string;
 
@@ -32,4 +35,4 @@ export class Route {
 
 export const RouteSchema = SchemaFactory.createForClass(Route);
 
-RouteSchema.index({ origin: 1, destination: 1 });
+RouteSchema.index({ company: 1, origin: 1, destination: 1 });

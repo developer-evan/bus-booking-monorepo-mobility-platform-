@@ -9,4 +9,10 @@ export default () => ({
     secret: process.env.JWT_SECRET,
     expiresIn: process.env.JWT_EXPIRES_IN || '1d',
   },
+  seed: {
+    superAdminEmail: process.env.SUPER_ADMIN_EMAIL,
+    superAdminPhone: process.env.SUPER_ADMIN_PHONE,
+    superAdminPassword: process.env.SUPER_ADMIN_PASSWORD,
+    superAdminFullName: process.env.SUPER_ADMIN_FULL_NAME,
+  },
 });

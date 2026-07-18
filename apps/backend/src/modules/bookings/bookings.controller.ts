@@ -15,10 +15,12 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
+import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { UserRole } from '../users/schemas/user.schema';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { CreatePosBookingDto } from './dto/create-pos-booking.dto';
+import { LookupBookingDto } from './dto/lookup-booking.dto';
 import { QueryBookingDto } from './dto/query-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 
@@ -30,7 +32,7 @@ export class BookingsController {
 
   @Post()
   @Roles(UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'Book seats on a trip (customer)' })
+  @ApiOperation({ summary: 'Book seats on a trip (customer online)' })
   create(
     @Body() createBookingDto: CreateBookingDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -38,9 +40,33 @@ export class BookingsController {
     return this.bookingsService.create(user.userId, createBookingDto);
   }
 
+  @Post('pos')
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @ApiOperation({
+    summary: 'POS booking for walk-in customer without an account',
+  })
+  createPos(
+    @Body() createPosBookingDto: CreatePosBookingDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.bookingsService.createPos(user, createPosBookingDto);
+  }
+
+  @Get('lookup')
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR, UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary: 'Look up a POS booking by reference and passenger contact',
+  })
+  lookup(
+    @Query() lookupBookingDto: LookupBookingDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.bookingsService.lookup(lookupBookingDto, user);
+  }
+
   @Get()
   @ApiOperation({
-    summary: 'List bookings (customers see own, staff see all)',
+    summary: 'List bookings (customers see own, staff see company)',
   })
   findAll(
     @Query() query: QueryBookingDto,
@@ -71,7 +97,7 @@ export class BookingsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Delete a booking (admin only)' })
   async remove(
     @Param('id') id: string,

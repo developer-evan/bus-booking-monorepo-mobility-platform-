@@ -15,6 +15,8 @@ import {
 } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { UserRole } from '../users/schemas/user.schema';
 import { CreateRouteDto } from './dto/create-route.dto';
 import { QueryRouteDto } from './dto/query-route.dto';
@@ -43,25 +45,36 @@ export class RoutesController {
   @Post()
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN, UserRole.OPERATOR)
-  @ApiOperation({ summary: 'Create a route (admin/operator)' })
-  create(@Body() createRouteDto: CreateRouteDto) {
-    return this.routesService.create(createRouteDto);
+  @ApiOperation({ summary: 'Create a route (company staff)' })
+  create(
+    @Body() createRouteDto: CreateRouteDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const companyId = this.routesService.assertWritableCompany(user);
+    return this.routesService.create(createRouteDto, companyId);
   }
 
   @Patch(':id')
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN, UserRole.OPERATOR)
-  @ApiOperation({ summary: 'Update a route (admin/operator)' })
-  update(@Param('id') id: string, @Body() updateRouteDto: UpdateRouteDto) {
-    return this.routesService.update(id, updateRouteDto);
+  @ApiOperation({ summary: 'Update a route (company staff)' })
+  update(
+    @Param('id') id: string,
+    @Body() updateRouteDto: UpdateRouteDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.routesService.update(id, updateRouteDto, user);
   }
 
   @Delete(':id')
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete a route (admin only)' })
-  async remove(@Param('id') id: string) {
-    await this.routesService.remove(id);
+  @ApiOperation({ summary: 'Delete a route (company admin)' })
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    await this.routesService.remove(id, user);
     return { message: 'Route deleted successfully' };
   }
 }
