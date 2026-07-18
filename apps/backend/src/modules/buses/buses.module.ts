@@ -5,9 +5,11 @@ import { BusesService } from './buses.service';
 import { Bus, BusSchema } from './schemas/bus.schema';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Bus.name, schema: BusSchema }])],
+  imports: [
+    MongooseModule.forFeature([{ name: Bus.name, schema: BusSchema }]),
+  ],
   controllers: [BusesController],
   providers: [BusesService],
-  exports: [MongooseModule],
+  exports: [BusesService, MongooseModule],
 })
 export class BusesModule {}

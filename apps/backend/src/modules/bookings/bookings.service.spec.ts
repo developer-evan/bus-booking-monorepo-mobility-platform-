@@ -1,4 +1,8 @@
+import { getModelToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Trip } from '../trips/schemas/trip.schema';
+import { TripsService } from '../trips/trips.service';
+import { Booking } from './schemas/booking.schema';
 import { BookingsService } from './bookings.service';
 
 describe('BookingsService', () => {
@@ -6,7 +10,21 @@ describe('BookingsService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [BookingsService],
+      providers: [
+        BookingsService,
+        {
+          provide: getModelToken(Booking.name),
+          useValue: {},
+        },
+        {
+          provide: getModelToken(Trip.name),
+          useValue: {},
+        },
+        {
+          provide: TripsService,
+          useValue: {},
+        },
+      ],
     }).compile();
 
     service = module.get<BookingsService>(BookingsService);
