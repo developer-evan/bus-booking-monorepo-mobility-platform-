@@ -16,6 +16,8 @@ import {
 import { Trip, TripDocument } from '../trips/schemas/trip.schema';
 import { TripsService } from '../trips/trips.service';
 import { UserRole } from '../users/schemas/user.schema';
+import { PaymentsService } from '../payments/payments.service';
+import { PaymentDocument } from '../payments/schemas/payment.schema';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { CreatePosBookingDto } from './dto/create-pos-booking.dto';
 import { LookupBookingDto } from './dto/lookup-booking.dto';
@@ -28,6 +30,11 @@ import {
   BookingStatus,
 } from './schemas/booking.schema';
 
+export interface PosBookingResult {
+  booking: BookingDocument;
+  payment: PaymentDocument;
+}
+
 @Injectable()
 export class BookingsService {
   constructor(
@@ -36,6 +43,7 @@ export class BookingsService {
     @InjectModel(Trip.name)
     private readonly tripModel: Model<TripDocument>,
     private readonly tripsService: TripsService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   async create(
@@ -53,7 +61,7 @@ export class BookingsService {
   async createPos(
     staff: AuthenticatedUser,
     createPosBookingDto: CreatePosBookingDto,
-  ): Promise<BookingDocument> {
+  ): Promise<PosBookingResult> {
     if (!staff.companyId) {
       throw new ForbiddenException('Company staff account required');
     }
@@ -73,7 +81,7 @@ export class BookingsService {
 
     assertCompanyResourceAccess(staff, trip.company);
 
-    return this.reserveAndCreate({
+    const booking = await this.reserveAndCreate({
       tripId: createPosBookingDto.trip,
       seatNumbers: createPosBookingDto.seatNumbers,
       channel: BookingChannel.POS,
@@ -86,6 +94,22 @@ export class BookingsService {
         : undefined,
       bookedBy: staff.userId,
     });
+
+    const { payment } = await this.paymentsService.recordCashPayment(staff, {
+      bookingId: booking._id.toString(),
+    });
+
+    const confirmedBooking = await this.bookingModel
+      .findById(booking._id)
+      .populate('trip')
+      .populate('user', '-password')
+      .populate('bookedBy', 'fullName email phone')
+      .exec();
+
+    return {
+      booking: confirmedBooking as BookingDocument,
+      payment,
+    };
   }
 
   async lookup(
@@ -276,7 +300,7 @@ export class BookingsService {
         passengerCount,
         totalPrice: trip.pricePerSeat * passengerCount,
         bookingReference: this.generateBookingReference(),
-        status: BookingStatus.CONFIRMED,
+        status: BookingStatus.PENDING,
         channel: input.channel,
         passengerName: input.passengerName,
         passengerPhone: input.passengerPhone,

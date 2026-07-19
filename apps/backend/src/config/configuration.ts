@@ -15,4 +15,7 @@ export default () => ({
     superAdminPassword: process.env.SUPER_ADMIN_PASSWORD,
     superAdminFullName: process.env.SUPER_ADMIN_FULL_NAME,
   },
+  payments: {
+    defaultCurrency: process.env.DEFAULT_CURRENCY || 'KES',
+  },
 });

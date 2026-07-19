@@ -22,13 +22,19 @@ export class Payment {
   @Prop({ type: Types.ObjectId, ref: 'Booking', required: true })
   booking: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'Company', required: true })
+  company: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  user?: Types.ObjectId | null;
+
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  user: Types.ObjectId;
+  receivedBy: Types.ObjectId;
 
   @Prop({ required: true, min: 0 })
   amount: number;
 
-  @Prop({ default: 'USD', trim: true, uppercase: true })
+  @Prop({ default: 'KES', trim: true, uppercase: true })
   currency: string;
 
   @Prop({ type: String, enum: PaymentMethod, required: true })
@@ -37,11 +43,20 @@ export class Payment {
   @Prop({ type: String, enum: PaymentStatus, default: PaymentStatus.PENDING })
   status: PaymentStatus;
 
+  @Prop({ required: true, trim: true, uppercase: true })
+  paymentReference: string;
+
   @Prop({ trim: true })
   transactionId?: string;
+
+  @Prop({ trim: true })
+  notes?: string;
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);
 
 PaymentSchema.index({ booking: 1 });
+PaymentSchema.index({ paymentReference: 1 }, { unique: true });
+PaymentSchema.index({ company: 1, createdAt: -1 });
 PaymentSchema.index({ user: 1, createdAt: -1 });
+PaymentSchema.index({ receivedBy: 1, createdAt: -1 });

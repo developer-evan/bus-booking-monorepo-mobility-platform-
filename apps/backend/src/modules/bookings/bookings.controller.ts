@@ -32,7 +32,9 @@ export class BookingsController {
 
   @Post()
   @Roles(UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'Book seats on a trip (customer online)' })
+  @ApiOperation({
+    summary: 'Book seats on a trip (customer online, pending until paid)',
+  })
   create(
     @Body() createBookingDto: CreateBookingDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -43,7 +45,7 @@ export class BookingsController {
   @Post('pos')
   @Roles(UserRole.ADMIN, UserRole.OPERATOR)
   @ApiOperation({
-    summary: 'POS booking for walk-in customer without an account',
+    summary: 'POS booking for walk-in customer with immediate cash payment',
   })
   createPos(
     @Body() createPosBookingDto: CreatePosBookingDto,
