@@ -4,12 +4,14 @@ import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  AcceptInviteRequest,
+  ActivateInviteRequest,
   AuthResponse,
   AuthUser,
   LoginRequest,
   portalRouteForRole,
   RegisterRequest,
+  SendInviteOtpRequest,
+  SendInviteOtpResponse,
   UserRole,
 } from '../models/auth.model';
 
@@ -40,9 +42,16 @@ export class AuthService {
       .pipe(tap((response) => this.setSession(response)));
   }
 
-  acceptInvite(payload: AcceptInviteRequest): Observable<AuthResponse> {
+  sendInviteOtp(payload: SendInviteOtpRequest): Observable<SendInviteOtpResponse> {
+    return this.http.post<SendInviteOtpResponse>(
+      `${this.baseUrl}/invite/send-otp`,
+      payload,
+    );
+  }
+
+  activateInvite(payload: ActivateInviteRequest): Observable<AuthResponse> {
     return this.http
-      .post<AuthResponse>(`${this.baseUrl}/accept-invite`, payload)
+      .post<AuthResponse>(`${this.baseUrl}/invite/activate`, payload)
       .pipe(tap((response) => this.setSession(response)));
   }
 

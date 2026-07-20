@@ -81,6 +81,103 @@ export class UsersService {
     return this.userModel.findOne(query).select('+password').exec();
   }
 
+  async findByIdentifier(identifier: string): Promise<UserDocument | null> {
+    const query = isEmailIdentifier(identifier)
+      ? { email: normalizeEmail(identifier) }
+      : { phone: normalizePhone(identifier) };
+
+    return this.userModel.findOne(query).exec();
+  }
+
+  async findByInviteContact(
+    email?: string,
+    phone?: string,
+  ): Promise<UserDocument | null> {
+    if (email) {
+      const userByEmail = await this.findByEmail(email);
+      if (userByEmail) {
+        return userByEmail;
+      }
+    }
+
+    if (phone) {
+      return this.findByPhone(phone);
+    }
+
+    return null;
+  }
+
+  async resolveAvailableInviteContact(
+    email?: string,
+    phone?: string,
+    existingUserId?: string,
+  ): Promise<{ email?: string; phone?: string }> {
+    const contact: { email?: string; phone?: string } = {};
+
+    if (email) {
+      const owner = await this.findByEmail(email);
+      if (!owner || owner._id.toString() === existingUserId) {
+        contact.email = normalizeEmail(email);
+      }
+    }
+
+    if (phone) {
+      const owner = await this.findByPhone(phone);
+      if (!owner || owner._id.toString() === existingUserId) {
+        contact.phone = normalizePhone(phone);
+      }
+    }
+
+    return contact;
+  }
+
+  async completeStaffInviteActivation(
+    userId: string,
+    data: {
+      fullName: string;
+      password: string;
+      role: UserRole.ADMIN | UserRole.OPERATOR;
+      company: string;
+      email?: string;
+      phone?: string;
+    },
+  ): Promise<UserDocument> {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const updateData: Record<string, unknown> = {
+      fullName: data.fullName,
+      password: hashedPassword,
+      role: data.role,
+      company: new Types.ObjectId(data.company),
+      isActive: true,
+    };
+
+    if (data.email) {
+      updateData.email = normalizeEmail(data.email);
+    }
+
+    if (data.phone) {
+      updateData.phone = normalizePhone(data.phone);
+    }
+
+    try {
+      const user = await this.userModel
+        .findByIdAndUpdate(userId, updateData, {
+          new: true,
+          runValidators: true,
+        })
+        .exec();
+
+      if (!user) {
+        throw new NotFoundException(`User with id "${userId}" not found`);
+      }
+
+      return user;
+    } catch (error) {
+      this.handleDuplicateKeyError(error);
+      throw error;
+    }
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto): Promise<UserDocument> {
     const updateData: Record<string, unknown> = { ...updateUserDto };
 

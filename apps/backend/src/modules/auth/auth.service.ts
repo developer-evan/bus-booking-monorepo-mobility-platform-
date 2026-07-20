@@ -1,16 +1,20 @@
 import {
+  ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
+import { toObjectIdString } from '../../common/utils/mongoose.util';
 import { CompaniesService } from '../companies/companies.service';
-import { UserRole } from '../users/schemas/user.schema';
+import { UserDocument, UserRole } from '../users/schemas/user.schema';
 import { UsersService } from '../users/users.service';
-import { AcceptInviteDto } from './dto/accept-invite.dto';
+import { ActivateInviteDto } from './dto/activate-invite.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { SendInviteOtpDto } from './dto/send-invite-otp.dto';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -52,28 +56,61 @@ export class AuthService {
     return this.buildAuthResponse(user);
   }
 
-  async acceptInvite(acceptInviteDto: AcceptInviteDto) {
-    const invite = await this.companiesService.findInviteByToken(
-      acceptInviteDto.token,
+  async sendInviteOtp(sendInviteOtpDto: SendInviteOtpDto) {
+    return this.companiesService.sendInviteOtp(sendInviteOtpDto.identifier);
+  }
+
+  async activateInvite(activateInviteDto: ActivateInviteDto) {
+    const invite = await this.companiesService.findPendingInviteByIdentifier(
+      activateInviteDto.identifier,
+      true,
     );
 
-    const email = acceptInviteDto.email ?? invite.email;
-    const phone = acceptInviteDto.phone ?? invite.phone;
+    await this.companiesService.verifyInviteOtp(invite, activateInviteDto.otp);
 
-    if (!email && !phone) {
-      throw new UnauthorizedException(
-        'Invite must include email or phone, or provide the missing one',
+    const companyId = toObjectIdString(invite.company);
+    let existingUser =
+      (await this.usersService.findByInviteContact(
+        invite.email,
+        invite.phone,
+      )) ??
+      (await this.usersService.findByIdentifier(activateInviteDto.identifier));
+    const existingUserId = existingUser?._id.toString();
+
+    const contact = await this.usersService.resolveAvailableInviteContact(
+      invite.email,
+      invite.phone,
+      existingUserId,
+    );
+
+    if (!contact.email && !contact.phone) {
+      throw new ConflictException(
+        'This invite contact is already linked to another account. Please sign in instead.',
       );
     }
 
-    const user = await this.usersService.create({
-      fullName: acceptInviteDto.fullName,
-      email,
-      phone,
-      password: acceptInviteDto.password,
+    const activationPayload = {
+      fullName: activateInviteDto.fullName,
+      password: activateInviteDto.password,
       role: invite.role,
-      company: invite.company.toString(),
-    });
+      company: companyId,
+      email: contact.email,
+      phone: contact.phone,
+    };
+
+    if (existingUser) {
+      this.assertExistingUserCanCompleteInvite(existingUser, companyId);
+
+      const user = await this.usersService.completeStaffInviteActivation(
+        existingUserId!,
+        activationPayload,
+      );
+
+      await this.companiesService.markInviteAccepted(invite);
+      return this.buildAuthResponse(user);
+    }
+
+    const user = await this.usersService.create(activationPayload);
 
     await this.companiesService.markInviteAccepted(invite);
     return this.buildAuthResponse(user);
@@ -82,6 +119,30 @@ export class AuthService {
   async getProfile(userId: string) {
     const user = await this.usersService.findById(userId);
     return this.usersService.sanitizeUser(user);
+  }
+
+  private assertExistingUserCanCompleteInvite(
+    user: UserDocument,
+    companyId: string,
+  ): void {
+    if (user.role === UserRole.CUSTOMER) {
+      throw new ConflictException(
+        'This email or phone is already registered as a customer account.',
+      );
+    }
+
+    if (user.role === UserRole.SUPER_ADMIN) {
+      throw new ConflictException(
+        'This contact belongs to a platform administrator.',
+      );
+    }
+
+    const userCompanyId = user.company?.toString() ?? null;
+    if (userCompanyId && userCompanyId !== companyId) {
+      throw new ConflictException(
+        'This contact is already linked to another company.',
+      );
+    }
   }
 
   private buildAuthResponse(user: Parameters<UsersService['sanitizeUser']>[0]) {

@@ -29,12 +29,24 @@ export interface RegisterRequest {
   password: string;
 }
 
-export interface AcceptInviteRequest {
-  token: string;
-  fullName: string;
-  password: string;
+export interface SendInviteOtpRequest {
+  identifier: string;
+}
+
+export interface SendInviteOtpResponse {
+  message: string;
+  otp: string;
+  otpExpiresAt: string;
+  role?: UserRole;
   email?: string;
   phone?: string;
+}
+
+export interface ActivateInviteRequest {
+  identifier: string;
+  otp: string;
+  fullName: string;
+  password: string;
 }
 
 export const STAFF_ROLES: UserRole[] = ['super_admin', 'admin', 'operator'];

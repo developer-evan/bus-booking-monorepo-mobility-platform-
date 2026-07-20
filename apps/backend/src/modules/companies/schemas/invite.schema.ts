@@ -24,8 +24,11 @@ export class Invite {
   @Prop({ type: String, enum: [UserRole.ADMIN, UserRole.OPERATOR], required: true })
   role: UserRole.ADMIN | UserRole.OPERATOR;
 
-  @Prop({ required: true, unique: true })
-  token: string;
+  @Prop({ required: true, select: false })
+  otpHash: string;
+
+  @Prop({ required: true })
+  otpExpiresAt: Date;
 
   @Prop({ required: true })
   expiresAt: Date;
@@ -42,4 +45,14 @@ export class Invite {
 
 export const InviteSchema = SchemaFactory.createForClass(Invite);
 
+InviteSchema.set('autoIndex', false);
+
 InviteSchema.index({ company: 1, status: 1 });
+InviteSchema.index(
+  { email: 1, status: 1 },
+  { partialFilterExpression: { email: { $type: 'string' } } },
+);
+InviteSchema.index(
+  { phone: 1, status: 1 },
+  { partialFilterExpression: { phone: { $type: 'string' } } },
+);

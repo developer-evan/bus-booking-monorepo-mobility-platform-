@@ -34,10 +34,17 @@ export const routes: Routes = [
       import('./pages/auth/register.component').then((m) => m.RegisterComponent),
   },
   {
-    path: 'auth/accept-invite',
+    path: 'auth/activate',
     canActivate: [guestGuard],
     loadComponent: () =>
-      import('./pages/auth/accept-invite.component').then((m) => m.AcceptInviteComponent),
+      import('./pages/auth/activate-account.component').then(
+        (m) => m.ActivateAccountComponent,
+      ),
+  },
+  {
+    path: 'auth/accept-invite',
+    redirectTo: 'auth/activate',
+    pathMatch: 'full',
   },
   {
     path: 'portal/customer',

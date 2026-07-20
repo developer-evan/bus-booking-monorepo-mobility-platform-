@@ -85,8 +85,8 @@ import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme
           </p>
           <p class="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
             Staff invite?
-            <a routerLink="/auth/accept-invite" class="font-medium text-teal-600 no-underline dark:text-teal-400"
-              >Accept invite</a
+            <a routerLink="/auth/activate" class="font-medium text-teal-600 no-underline dark:text-teal-400"
+              >Activate account</a
             >
           </p>
         </div>

@@ -4,9 +4,10 @@ import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { AuthService } from './auth.service';
-import { AcceptInviteDto } from './dto/accept-invite.dto';
+import { ActivateInviteDto } from './dto/activate-invite.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { SendInviteOtpDto } from './dto/send-invite-otp.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -28,10 +29,19 @@ export class AuthController {
   }
 
   @Public()
-  @Post('accept-invite')
-  @ApiOperation({ summary: 'Accept a company invite and create staff account' })
-  acceptInvite(@Body() acceptInviteDto: AcceptInviteDto) {
-    return this.authService.acceptInvite(acceptInviteDto);
+  @Post('invite/send-otp')
+  @ApiOperation({
+    summary: 'Send OTP for a pending staff invite (OTP returned for testing)',
+  })
+  sendInviteOtp(@Body() sendInviteOtpDto: SendInviteOtpDto) {
+    return this.authService.sendInviteOtp(sendInviteOtpDto);
+  }
+
+  @Public()
+  @Post('invite/activate')
+  @ApiOperation({ summary: 'Verify OTP and activate a staff invite' })
+  activateInvite(@Body() activateInviteDto: ActivateInviteDto) {
+    return this.authService.activateInvite(activateInviteDto);
   }
 
   @Get('me')
