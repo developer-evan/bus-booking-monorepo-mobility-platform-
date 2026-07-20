@@ -1,17 +1,19 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
 import { DatePicker } from 'primeng/datepicker';
 import { Select } from 'primeng/select';
 import { Tag } from 'primeng/tag';
+import {
+  CityOption,
+  PlatformStats,
+  PopularRouteView,
+} from '../../core/models/route.model';
+import { CustomerCatalogService } from '../../core/services/customer-catalog.service';
+import { toIsoDateParam } from '../../core/utils/format.util';
 import { LandingFooterComponent } from '../../layout/landing-footer/landing-footer.component';
 import { LandingHeaderComponent } from '../../layout/landing-header/landing-header.component';
-
-interface CityOption {
-  label: string;
-  value: string;
-}
 
 interface Feature {
   icon: string;
@@ -23,14 +25,6 @@ interface Step {
   number: string;
   title: string;
   description: string;
-}
-
-interface RouteCard {
-  from: string;
-  to: string;
-  duration: string;
-  price: string;
-  frequency: string;
 }
 
 @Component({
@@ -56,7 +50,7 @@ interface RouteCard {
             class="mx-auto grid max-w-6xl gap-10 px-6 py-14 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:gap-12 lg:py-16"
           >
             <div class="max-w-xl">
-              <p-tag value="Now serving 45+ operators" severity="secondary" [rounded]="true" />
+              <p-tag [value]="heroTag()" severity="secondary" [rounded]="true" />
               <h1
                 class="mt-4 text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-[3.25rem]"
               >
@@ -87,10 +81,11 @@ interface RouteCard {
                   <p-select
                     inputId="from"
                     formControlName="from"
-                    [options]="cities"
+                    [options]="cities()"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Select city"
+                    [loading]="catalogLoading()"
                     styleClass="w-full"
                   />
                 </div>
@@ -113,10 +108,11 @@ interface RouteCard {
                   <p-select
                     inputId="to"
                     formControlName="to"
-                    [options]="cities"
+                    [options]="cities()"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Select city"
+                    [loading]="catalogLoading()"
                     styleClass="w-full"
                   />
                 </div>
@@ -169,8 +165,8 @@ interface RouteCard {
           class="border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
           aria-label="Platform statistics"
         >
-          <div class="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-6 py-7 sm:grid-cols-4">
-            @for (stat of stats; track stat.label) {
+          <div class="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-6 py-7 sm:grid-cols-3">
+            @for (stat of statItems(); track stat.label) {
               <div class="flex flex-col gap-1">
                 <span class="text-3xl font-bold tracking-tight text-teal-600 dark:text-teal-400">{{
                   stat.value
@@ -261,11 +257,37 @@ interface RouteCard {
                   High-demand corridors with frequent departures and competitive fares.
                 </p>
               </div>
-              <p-button label="View all routes" [outlined]="true" severity="secondary" />
+              <p-button
+                label="View all routes"
+                [outlined]="true"
+                severity="secondary"
+                routerLink="/search"
+                [queryParams]="{ from: searchForm.value.from, to: searchForm.value.to, date: todayIso, passengers: searchForm.value.passengers }"
+              />
             </div>
 
+            @if (catalogLoading()) {
+              <div
+                class="rounded-xl border border-neutral-200 bg-white p-10 text-center dark:border-neutral-800 dark:bg-neutral-900"
+              >
+                <i class="pi pi-spin pi-spinner text-2xl text-teal-600 dark:text-teal-400"></i>
+                <p class="mt-4 text-neutral-500 dark:text-neutral-400">Loading routes...</p>
+              </div>
+            } @else if (catalogError()) {
+              <div
+                class="rounded-xl border border-red-200 bg-red-50 p-6 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+              >
+                {{ catalogError() }}
+              </div>
+            } @else if (popularRoutes().length === 0) {
+              <div
+                class="rounded-xl border border-neutral-200 bg-white p-10 text-center dark:border-neutral-800 dark:bg-neutral-900"
+              >
+                <p class="text-neutral-500 dark:text-neutral-400">No active routes yet.</p>
+              </div>
+            } @else {
             <div class="grid gap-4 md:grid-cols-2">
-              @for (route of popularRoutes; track route.from + route.to) {
+              @for (route of popularRoutes(); track route.id) {
                 <article
                   class="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900 sm:p-6"
                 >
@@ -281,18 +303,32 @@ interface RouteCard {
                     <span class="inline-flex items-center gap-1.5">
                       <i class="pi pi-sync"></i> {{ route.frequency }}
                     </span>
+                    @if (route.operatorCount > 1) {
+                      <span class="inline-flex items-center gap-1.5">
+                        <i class="pi pi-building"></i> {{ route.operatorCount }} operators
+                      </span>
+                    }
                   </div>
                   <div
                     class="mt-4 flex items-center justify-between border-t border-neutral-200 pt-4 dark:border-neutral-800"
                   >
                     <span class="text-[0.9375rem] font-semibold text-teal-600 dark:text-teal-400">
-                      from {{ route.price }}
+                      @if (route.price) {
+                        from {{ route.price }}
+                      } @else {
+                        Price on search
+                      }
                     </span>
-                    <p-button label="Book" [text]="true" />
+                    <p-button
+                      label="Book"
+                      [text]="true"
+                      (onClick)="bookPopularRoute(route)"
+                    />
                   </div>
                 </article>
               }
             </div>
+            }
           </div>
         </section>
 
@@ -330,26 +366,25 @@ interface RouteCard {
     </div>
   `,
 })
-export class LandingComponent {
+export class LandingComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
+  private readonly catalog = inject(CustomerCatalogService);
 
   protected readonly minDate = new Date();
+  protected readonly todayIso = toIsoDateParam(new Date());
+  protected readonly catalogLoading = signal(true);
+  protected readonly catalogError = signal<string | null>(null);
+  protected readonly cities = signal<CityOption[]>([]);
+  protected readonly popularRoutes = signal<PopularRouteView[]>([]);
+  protected readonly platformStats = signal<PlatformStats | null>(null);
 
   protected readonly searchForm = this.fb.group({
-    from: ['Nairobi', Validators.required],
-    to: ['Mombasa', Validators.required],
+    from: ['', Validators.required],
+    to: ['', Validators.required],
     date: [new Date(), Validators.required],
     passengers: [1, Validators.required],
   });
-
-  protected readonly cities: CityOption[] = [
-    { label: 'Nairobi', value: 'Nairobi' },
-    { label: 'Mombasa', value: 'Mombasa' },
-    { label: 'Kisumu', value: 'Kisumu' },
-    { label: 'Nakuru', value: 'Nakuru' },
-    { label: 'Eldoret', value: 'Eldoret' },
-    { label: 'Malindi', value: 'Malindi' },
-  ];
 
   protected readonly passengerOptions = [
     { label: '1 passenger', value: 1 },
@@ -359,12 +394,74 @@ export class LandingComponent {
     { label: '5+ passengers', value: 5 },
   ];
 
-  protected readonly stats = [
-    { value: '120+', label: 'Daily routes' },
-    { value: '45', label: 'Partner operators' },
-    { value: '18k', label: 'Tickets booked monthly' },
-    { value: '4.8', label: 'Average rating' },
-  ];
+  protected readonly statItems = signal([
+    { value: '—', label: 'Active routes' },
+    { value: '—', label: 'Partner operators' },
+    { value: '—', label: 'Upcoming trips' },
+  ]);
+
+  protected heroTag(): string {
+    const stats = this.platformStats();
+    if (!stats || stats.operators === 0) {
+      return 'Intercity bus booking';
+    }
+    return `Now serving ${stats.operators} operator${stats.operators === 1 ? '' : 's'}`;
+  }
+
+  ngOnInit(): void {
+    this.catalog.getCities().subscribe({
+      next: (cities) => {
+        this.cities.set(cities);
+        if (cities.length >= 2) {
+          this.searchForm.patchValue({
+            from: cities[0].value,
+            to: cities[1].value,
+          });
+        } else if (cities.length === 1) {
+          this.searchForm.patchValue({ from: cities[0].value });
+        }
+      },
+      error: () => {
+        this.catalogError.set(
+          'Unable to load route data. Make sure the backend is running on port 3000.',
+        );
+      },
+    });
+
+    this.catalog.getPopularRoutes().subscribe({
+      next: (routes) => {
+        this.popularRoutes.set(routes);
+        this.catalogLoading.set(false);
+      },
+      error: () => {
+        if (!this.catalogError()) {
+          this.catalogError.set(
+            'Unable to load route data. Make sure the backend is running on port 3000.',
+          );
+        }
+      },
+    });
+
+    this.catalog.getPlatformStats().subscribe({
+      next: (stats) => {
+        this.platformStats.set(stats);
+        this.statItems.set([
+          { value: String(stats.routes), label: 'Active routes' },
+          { value: String(stats.operators), label: 'Partner operators' },
+          { value: String(stats.upcomingTrips), label: 'Upcoming trips' },
+        ]);
+        this.catalogLoading.set(false);
+      },
+      error: () => {
+        this.catalogLoading.set(false);
+        if (!this.catalogError()) {
+          this.catalogError.set(
+            'Unable to load route data. Make sure the backend is running on port 3000.',
+          );
+        }
+      },
+    });
+  }
 
   protected readonly features: Feature[] = [
     {
@@ -411,37 +508,6 @@ export class LandingComponent {
     },
   ];
 
-  protected readonly popularRoutes: RouteCard[] = [
-    {
-      from: 'Nairobi',
-      to: 'Mombasa',
-      duration: '8h 30m',
-      price: 'KES 1,500',
-      frequency: 'Every hour',
-    },
-    {
-      from: 'Nairobi',
-      to: 'Kisumu',
-      duration: '6h 15m',
-      price: 'KES 1,200',
-      frequency: '12 daily',
-    },
-    {
-      from: 'Nairobi',
-      to: 'Nakuru',
-      duration: '2h 45m',
-      price: 'KES 600',
-      frequency: '18 daily',
-    },
-    {
-      from: 'Mombasa',
-      to: 'Malindi',
-      duration: '2h 10m',
-      price: 'KES 450',
-      frequency: '8 daily',
-    },
-  ];
-
   protected swapLocations(): void {
     const from = this.searchForm.get('from')?.value;
     const to = this.searchForm.get('to')?.value;
@@ -453,5 +519,35 @@ export class LandingComponent {
       this.searchForm.markAllAsTouched();
       return;
     }
+
+    const { from, to, date, passengers } = this.searchForm.getRawValue();
+    if (!from || !to || !date) {
+      return;
+    }
+
+    this.router.navigate(['/search'], {
+      queryParams: {
+        from,
+        to,
+        date: toIsoDateParam(date),
+        passengers,
+      },
+    });
+  }
+
+  protected bookPopularRoute(route: PopularRouteView): void {
+    this.searchForm.patchValue({
+      from: route.from,
+      to: route.to,
+    });
+
+    this.router.navigate(['/search'], {
+      queryParams: {
+        from: route.from,
+        to: route.to,
+        date: this.todayIso,
+        passengers: this.searchForm.value.passengers ?? 1,
+      },
+    });
   }
 }

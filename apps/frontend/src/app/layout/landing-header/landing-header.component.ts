@@ -1,6 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
+import { AuthService } from '../../core/services/auth.service';
+import { portalRouteForRole } from '../../core/models/auth.model';
 import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme-toggle.component';
 
 @Component({
@@ -40,22 +42,50 @@ import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme
 
         <div class="flex items-center gap-1">
           <app-theme-toggle />
-          <p-button
-            label="Sign in"
-            [text]="true"
-            severity="secondary"
-            routerLink="/portal"
-          />
-          <p-button label="Book a trip" routerLink="/portal" class="hidden sm:inline-flex" />
+          @if (auth.isAuthenticated() && auth.user(); as user) {
+            <p-button
+              [label]="user.fullName.split(' ')[0]"
+              [text]="true"
+              severity="secondary"
+              [routerLink]="portalLink(user.role)"
+            />
+            <p-button
+              label="Sign out"
+              [text]="true"
+              severity="secondary"
+              icon="pi pi-sign-out"
+              (onClick)="auth.logout(false)"
+            />
+          } @else {
+            <p-button
+              label="Sign in"
+              [text]="true"
+              severity="secondary"
+              routerLink="/auth/login"
+            />
+            <p-button
+              label="Register"
+              [outlined]="true"
+              severity="secondary"
+              routerLink="/auth/register"
+              class="hidden sm:inline-flex"
+            />
+          }
         </div>
       </div>
     </header>
   `,
 })
 export class LandingHeaderComponent {
+  protected readonly auth = inject(AuthService);
+
   protected readonly navLinks = [
     { label: 'Routes', href: '#routes' },
     { label: 'How it works', href: '#how-it-works' },
     { label: 'For operators', href: '#operators' },
   ];
+
+  protected portalLink(role: Parameters<typeof portalRouteForRole>[0]): string {
+    return portalRouteForRole(role);
+  }
 }
