@@ -1,0 +1,209 @@
+<div class="landing">
+  <app-landing-header />
+
+  <main>
+    <section class="hero">
+      <div class="hero__inner">
+        <div class="hero__copy">
+          <p-tag value="Now serving 45+ operators" severity="secondary" [rounded]="true" />
+          <h1>Bus travel, booked the modern way</h1>
+          <p class="hero__subtitle">
+            Find routes, compare prices, and secure your seat online. No queues,
+            no guesswork — just a clean booking experience from search to boarding.
+          </p>
+        </div>
+
+        <div class="search-panel" [formGroup]="searchForm">
+          <div class="search-panel__header">
+            <h2>Find your next trip</h2>
+            <p>Search departures across Kenya</p>
+          </div>
+
+          <div class="search-panel__grid">
+            <div class="field">
+              <label for="from">From</label>
+              <p-select
+                inputId="from"
+                formControlName="from"
+                [options]="cities"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select city"
+                styleClass="w-full"
+              />
+            </div>
+
+            <div class="field field--swap">
+              <p-button
+                icon="pi pi-arrow-right-arrow-left"
+                [rounded]="true"
+                [text]="true"
+                severity="secondary"
+                ariaLabel="Swap origin and destination"
+                (onClick)="swapLocations()"
+              />
+            </div>
+
+            <div class="field">
+              <label for="to">To</label>
+              <p-select
+                inputId="to"
+                formControlName="to"
+                [options]="cities"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select city"
+                styleClass="w-full"
+              />
+            </div>
+
+            <div class="field">
+              <label for="date">Travel date</label>
+              <p-datepicker
+                inputId="date"
+                formControlName="date"
+                [showIcon]="true"
+                [minDate]="minDate"
+                dateFormat="D, M d"
+                styleClass="w-full"
+              />
+            </div>
+
+            <div class="field">
+              <label for="passengers">Passengers</label>
+              <p-select
+                inputId="passengers"
+                formControlName="passengers"
+                [options]="passengerOptions"
+                optionLabel="label"
+                optionValue="value"
+                styleClass="w-full"
+              />
+            </div>
+
+            <div class="field field--action">
+              <p-button
+                label="Search trips"
+                icon="pi pi-search"
+                styleClass="w-full"
+                (onClick)="searchTrips()"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats" aria-label="Platform statistics">
+      <div class="stats__inner">
+        @for (stat of stats; track stat.label) {
+          <div class="stat">
+            <span class="stat__value">{{ stat.value }}</span>
+            <span class="stat__label">{{ stat.label }}</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="section" id="how-it-works">
+      <div class="section__inner">
+        <div class="section__intro">
+          <p-tag value="How it works" severity="secondary" [rounded]="true" />
+          <h2>Three steps to your seat</h2>
+          <p>A straightforward flow designed for first-time and frequent travelers alike.</p>
+        </div>
+
+        <div class="steps">
+          @for (step of steps; track step.number) {
+            <article class="step-card">
+              <span class="step-card__number">{{ step.number }}</span>
+              <h3>{{ step.title }}</h3>
+              <p>{{ step.description }}</p>
+            </article>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--muted">
+      <div class="section__inner">
+        <div class="section__intro">
+          <p-tag value="Why BusBook" severity="secondary" [rounded]="true" />
+          <h2>Built for clarity and confidence</h2>
+          <p>Everything you need for stress-free intercity travel, without the clutter.</p>
+        </div>
+
+        <div class="features">
+          @for (feature of features; track feature.title) {
+            <article class="feature-card">
+              <span class="feature-card__icon" aria-hidden="true">
+                <i [class]="feature.icon"></i>
+              </span>
+              <h3>{{ feature.title }}</h3>
+              <p>{{ feature.description }}</p>
+            </article>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="routes">
+      <div class="section__inner">
+        <div class="section__intro section__intro--row">
+          <div>
+            <p-tag value="Popular routes" severity="secondary" [rounded]="true" />
+            <h2>Trending journeys this week</h2>
+            <p>High-demand corridors with frequent departures and competitive fares.</p>
+          </div>
+          <p-button label="View all routes" [outlined]="true" severity="secondary" />
+        </div>
+
+        <div class="routes">
+          @for (route of popularRoutes; track route.from + route.to) {
+            <article class="route-card">
+              <div class="route-card__cities">
+                <span>{{ route.from }}</span>
+                <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                <span>{{ route.to }}</span>
+              </div>
+              <div class="route-card__meta">
+                <span><i class="pi pi-clock"></i> {{ route.duration }}</span>
+                <span><i class="pi pi-sync"></i> {{ route.frequency }}</span>
+              </div>
+              <div class="route-card__footer">
+                <span class="route-card__price">from {{ route.price }}</span>
+                <p-button label="Book" [text]="true" />
+              </div>
+            </article>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--cta" id="operators">
+      <div class="section__inner">
+        <div class="cta-panel">
+          <div class="cta-panel__copy">
+            <p-tag value="For operators" severity="secondary" [rounded]="true" />
+            <h2>Grow your fleet with BusBook</h2>
+            <p>
+              List routes, manage bookings, and reach more passengers through a
+              single operator portal. Onboarding takes less than a day.
+            </p>
+          </div>
+          <div class="cta-panel__actions">
+            <p-button label="Operator portal" icon="pi pi-building" routerLink="/portal" />
+            <p-button
+              label="Talk to our team"
+              icon="pi pi-envelope"
+              [outlined]="true"
+              severity="secondary"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <app-landing-footer />
+</div>

@@ -1,0 +1,36 @@
+<footer class="footer">
+  <div class="footer__inner">
+    <div class="footer__top">
+      <div class="footer__brand">
+        <div class="footer__logo">
+          <i class="pi pi-directions" aria-hidden="true"></i>
+          <span>BusBook</span>
+        </div>
+        <p class="footer__tagline">
+          Simple, reliable bus travel across Kenya. Book seats in minutes.
+        </p>
+      </div>
+
+      @for (column of columns; track column.title) {
+        <div class="footer__column">
+          <h3 class="footer__heading">{{ column.title }}</h3>
+          <ul class="footer__links">
+            @for (link of column.links; track link) {
+              <li><a href="#">{{ link }}</a></li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+
+    <p-divider />
+
+    <div class="footer__bottom">
+      <span>&copy; {{ year }} BusBook. All rights reserved.</span>
+      <div class="footer__legal">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+      </div>
+    </div>
+  </div>
+</footer>
