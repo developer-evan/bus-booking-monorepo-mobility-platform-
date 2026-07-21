@@ -7,13 +7,19 @@ import { AuthService } from '../../core/services/auth.service';
 import { BookingsApiService } from '../../core/services/bookings-api.service';
 import { extractApiErrorMessage } from '../../core/utils/auth.util';
 import { formatCurrency, formatDate, formatTime } from '../../core/utils/format.util';
+import { portalNavItemsForRole } from '../../core/models/portal-nav.model';
 import { PortalShellComponent } from '../../layout/portal-shell/portal-shell.component';
 
 @Component({
   selector: 'app-customer-portal',
   imports: [RouterLink, Button, Tag, PortalShellComponent],
   template: `
-    <app-portal-shell title="My bookings" subtitle="View and manage your trip reservations">
+    <app-portal-shell
+      title="My bookings"
+      subtitle="View and manage your trip reservations"
+      portalLabel="Customer Portal"
+      [navItems]="navItems"
+    >
       @if (successMessage()) {
         <div
           class="mb-6 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-teal-800 dark:border-teal-900 dark:bg-teal-950/40 dark:text-teal-200"
@@ -92,6 +98,8 @@ import { PortalShellComponent } from '../../layout/portal-shell/portal-shell.com
 export class CustomerPortalComponent implements OnInit {
   private readonly bookingsApi = inject(BookingsApiService);
   private readonly route = inject(ActivatedRoute);
+
+  protected readonly navItems = portalNavItemsForRole('customer');
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);

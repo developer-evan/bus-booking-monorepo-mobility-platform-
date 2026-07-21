@@ -2,7 +2,15 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Trip, TripSearchQuery } from '../models/trip.model';
+import { Trip, TripSearchQuery, TripStatus } from '../models/trip.model';
+
+export interface UpdateTripRequest {
+  status?: TripStatus;
+  pricePerSeat?: number;
+  availableSeats?: number;
+  departureTime?: string;
+  arrivalTime?: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class TripsApiService {
@@ -17,6 +25,10 @@ export class TripsApiService {
 
   getById(id: string): Observable<Trip> {
     return this.http.get<Trip>(`${this.baseUrl}/${id}`);
+  }
+
+  update(id: string, payload: UpdateTripRequest): Observable<Trip> {
+    return this.http.patch<Trip>(`${this.baseUrl}/${id}`, payload);
   }
 
   private toParams(query: TripSearchQuery): HttpParams {

@@ -59,6 +59,39 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard(['admin'])],
     loadComponent: () =>
       import('./pages/portal/admin-portal.component').then((m) => m.AdminPortalComponent),
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/portal/admin/admin-dashboard.component').then(
+            (m) => m.AdminDashboardComponent,
+          ),
+        data: {
+          title: 'Admin dashboard',
+          subtitle: 'Company overview, metrics, and quick actions',
+        },
+      },
+      {
+        path: 'company',
+        loadComponent: () =>
+          import('./pages/portal/admin/admin-company.component').then(
+            (m) => m.AdminCompanyComponent,
+          ),
+        data: {
+          title: 'Company profile',
+          subtitle: 'Contact details and operational readiness',
+        },
+      },
+      {
+        path: 'team',
+        loadComponent: () =>
+          import('./pages/portal/admin/admin-team.component').then((m) => m.AdminTeamComponent),
+        data: {
+          title: 'Team invites',
+          subtitle: 'Invite operators to your company',
+        },
+      },
+    ],
   },
   {
     path: 'portal/operator',
@@ -67,6 +100,52 @@ export const routes: Routes = [
       import('./pages/portal/operator-portal.component').then(
         (m) => m.OperatorPortalComponent,
       ),
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/portal/operator/operator-dashboard.component').then(
+            (m) => m.OperatorDashboardComponent,
+          ),
+        data: {
+          title: 'Operator dashboard',
+          subtitle: "Today's trips, bookings, and quick actions",
+        },
+      },
+      {
+        path: 'pos',
+        loadComponent: () =>
+          import('./pages/portal/operator/operator-pos.component').then(
+            (m) => m.OperatorPosComponent,
+          ),
+        data: {
+          title: 'POS bookings',
+          subtitle: 'Create walk-in bookings with immediate cash payment',
+        },
+      },
+      {
+        path: 'trips',
+        loadComponent: () =>
+          import('./pages/portal/operator/operator-trips.component').then(
+            (m) => m.OperatorTripsComponent,
+          ),
+        data: {
+          title: 'Trip operations',
+          subtitle: 'Update boarding, departure, and completion status',
+        },
+      },
+      {
+        path: 'check-in',
+        loadComponent: () =>
+          import('./pages/portal/operator/operator-check-in.component').then(
+            (m) => m.OperatorCheckInComponent,
+          ),
+        data: {
+          title: 'Passenger check-in',
+          subtitle: 'Look up bookings and mark passengers as boarded',
+        },
+      },
+    ],
   },
   {
     path: 'portal/super-admin',
@@ -75,6 +154,30 @@ export const routes: Routes = [
       import('./pages/portal/super-admin-portal.component').then(
         (m) => m.SuperAdminPortalComponent,
       ),
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/portal/super-admin/super-admin-dashboard.component').then(
+            (m) => m.SuperAdminDashboardComponent,
+          ),
+        data: {
+          title: 'Super admin dashboard',
+          subtitle: 'Platform metrics and onboarding overview',
+        },
+      },
+      {
+        path: 'companies',
+        loadComponent: () =>
+          import('./pages/portal/super-admin/super-admin-companies.component').then(
+            (m) => m.SuperAdminCompaniesComponent,
+          ),
+        data: {
+          title: 'Companies',
+          subtitle: 'Onboard bus companies and invite their admins',
+        },
+      },
+    ],
   },
   {
     path: 'portal',

@@ -1,54 +1,52 @@
-import { Component, inject, input } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { Button } from 'primeng/button';
+import { Component, inject, input, signal } from '@angular/core';
+import { portalRouteForRole } from '../../core/models/auth.model';
+import { PortalNavItem } from '../../core/models/portal-nav.model';
 import { AuthService } from '../../core/services/auth.service';
-import { portalRouteForRole, roleLabel } from '../../core/models/auth.model';
-import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme-toggle.component';
+import { PortalNavbarComponent } from '../portal-navbar/portal-navbar.component';
+import { PortalSidebarComponent } from '../portal-sidebar/portal-sidebar.component';
 
+/**
+ * Authenticated portal layout only — do not use on public/marketing pages.
+ * Public pages use LandingHeaderComponent instead.
+ */
 @Component({
   selector: 'app-portal-shell',
-  imports: [RouterLink, Button, ThemeToggleComponent],
+  imports: [PortalSidebarComponent, PortalNavbarComponent],
   template: `
-    <div class="min-h-dvh bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50">
-      <header class="border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3.5">
-          <a routerLink="/" class="inline-flex items-center gap-2 no-underline text-inherit">
-            <span
-              class="inline-flex size-8 items-center justify-center rounded-lg border border-teal-600 text-sm text-teal-600 dark:border-teal-400 dark:text-teal-400"
-            >
-              <i class="pi pi-directions"></i>
-            </span>
-            <span class="text-lg font-semibold">BusBook</span>
-          </a>
+    <div class="flex min-h-dvh bg-neutral-100 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50">
+      @if (sidebarOpen() && navItems().length > 0) {
+        <button
+          type="button"
+          class="fixed inset-0 z-40 bg-neutral-950/50 backdrop-blur-[1px] lg:hidden"
+          aria-label="Close portal navigation"
+          (click)="closeSidebar()"
+        ></button>
+      }
 
-          <div class="flex items-center gap-1">
-            <app-theme-toggle />
-            @if (user(); as currentUser) {
-              <span class="hidden px-2 text-sm text-neutral-500 sm:inline dark:text-neutral-400">
-                {{ currentUser.fullName }} · {{ roleLabel(currentUser.role) }}
-              </span>
-              <p-button
-                label="Sign out"
-                [text]="true"
-                severity="secondary"
-                icon="pi pi-sign-out"
-                (onClick)="logout()"
-              />
-            }
+      @if (navItems().length > 0) {
+        <app-portal-sidebar
+          [open]="sidebarOpen()"
+          [navItems]="navItems()"
+          [portalLabel]="portalLabel()"
+          [homeRoute]="portalHomeRoute()"
+          (navigate)="closeSidebar()"
+        />
+      }
+
+      <div class="flex min-h-dvh min-w-0 flex-1 flex-col">
+        <app-portal-navbar
+          [title]="title()"
+          [subtitle]="subtitle()"
+          [showMenuButton]="navItems().length > 0"
+          (menuToggle)="toggleSidebar()"
+        />
+
+        <main class="flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+          <div class="mx-auto max-w-6xl">
+            <ng-content />
           </div>
-        </div>
-      </header>
-
-      <main class="mx-auto max-w-6xl px-6 py-10">
-        <div class="mb-8">
-          <h1 class="text-3xl font-bold tracking-tight">{{ title() }}</h1>
-          @if (subtitle()) {
-            <p class="mt-2 text-neutral-500 dark:text-neutral-400">{{ subtitle() }}</p>
-          }
-        </div>
-
-        <ng-content />
-      </main>
+        </main>
+      </div>
     </div>
   `,
 })
@@ -57,11 +55,21 @@ export class PortalShellComponent {
 
   readonly title = input.required<string>();
   readonly subtitle = input<string>('');
+  readonly navItems = input<PortalNavItem[]>([]);
+  readonly portalLabel = input<string>('');
 
-  protected readonly user = this.auth.user;
-  protected readonly roleLabel = roleLabel;
+  protected readonly sidebarOpen = signal(false);
 
-  protected logout(): void {
-    this.auth.logout();
+  protected portalHomeRoute(): string {
+    const role = this.auth.user()?.role;
+    return role ? portalRouteForRole(role) : '/portal';
+  }
+
+  protected toggleSidebar(): void {
+    this.sidebarOpen.update((open) => !open);
+  }
+
+  protected closeSidebar(): void {
+    this.sidebarOpen.set(false);
   }
 }
