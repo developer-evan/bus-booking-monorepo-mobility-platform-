@@ -15,13 +15,13 @@ export class User {
   @Prop({ required: true, trim: true })
   fullName: string;
 
-  @Prop({ sparse: true, unique: true, lowercase: true, trim: true })
+  @Prop({ lowercase: true, trim: true })
   email?: string;
 
   @Prop({ required: true, select: false })
   password: string;
 
-  @Prop({ sparse: true, unique: true, trim: true })
+  @Prop({ trim: true })
   phone?: string;
 
   @Prop({ type: String, enum: UserRole, default: UserRole.CUSTOMER })
@@ -36,11 +36,13 @@ export class User {
 
 export const UserSchema = SchemaFactory.createForClass(User);
 
+UserSchema.set('autoIndex', false);
+
 UserSchema.index(
   { email: 1 },
-  { unique: true, sparse: true, partialFilterExpression: { email: { $type: 'string' } } },
+  { unique: true, partialFilterExpression: { email: { $type: 'string' } } },
 );
 UserSchema.index(
   { phone: 1 },
-  { unique: true, sparse: true, partialFilterExpression: { phone: { $type: 'string' } } },
+  { unique: true, partialFilterExpression: { phone: { $type: 'string' } } },
 );
